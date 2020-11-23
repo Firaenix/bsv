@@ -2,10 +2,10 @@ declare module "bsv" {
   declare class Struct {
     constructor(obj: any);
     fromObject(obj: any): this;
-    fromBr(br: any): void;
-    asyncFromBr(br: any): void;
-    toBw(bw: any): void;
-    asyncToBw(bw: any): void;
+    fromBr(br: Br): Struct;
+    asyncFromBr(br: Br): Promise<Struct>;
+    toBw(bw: Bw): this;
+    asyncToBw(bw: Bw): this;
     /**
      * It is very often the case that you want to create a bitcoin object from a
      * stream of small buffers rather than from a buffer of the correct length.
@@ -15,7 +15,7 @@ declare module "bsv" {
      * to produce the object. In some cases it is able to yield the number of
      * bytes it is expecting, but that is not always known.
      */
-    genFromBuffers(): Generator<any, void, any>;
+    genFromBuffers(): Generator<any, any, any>;
     /**
      * A convenience method used by from the genFromBuffers* generators.
      * Basically lets you expect a certain number of bytes (len) and keeps
@@ -23,22 +23,25 @@ declare module "bsv" {
      * remaining, and returns an object containing a buffer of the expected
      * length, and, if any, the remainder buffer.
      */
-    expect(len: any, startbuf: any): Generator<number, T100, any>;
+    expect(len: number, startbuf: Buffer): Generator<number, {
+      buf: Buffer,
+      remainderbuf: Buffer
+    }, any>;
     /**
      * Convert a buffer into an object, i.e. deserialize the object.
      */
-    fromBuffer(buf: any, ...rest: any[]): void;
-    asyncFromBuffer(buf: any, ...rest: any[]): void;
+    fromBuffer(buf: Buffer, ...rest: any[]): this;
+    asyncFromBuffer(buf: Buffer, ...rest: any[]): Promise<this>;
     /**
      * The complement of toFastBuffer - see description for toFastBuffer
      */
-    fromFastBuffer(buf: any, ...rest: any[]): void | this;
+    fromFastBuffer(buf: Buffer, ...rest: any[]): this;
     /**
      * Convert the object into a buffer, i.e. serialize the object. This method
      * may block the main thread.
      */
-    toBuffer(...rest: any[]): any;
-    asyncToBuffer(...rest: any[]): any;
+    toBuffer(...rest: any[]): Buffer;
+    asyncToBuffer(...rest: any[]): Promise<Buffer>;
     /**
      * Sometimes the toBuffer method has cryptography and blocks the main thread,
      * and we need a non-blocking way to serialize an object. That is what
@@ -54,103 +57,26 @@ declare module "bsv" {
      * buffer, so we can transport a blank object to a worker. So that behavior
      * is included by default.
      */
-    toFastBuffer(...rest: any[]): any;
-    fromHex(hex: any, ...rest: any[]): void;
-    asyncFromHex(hex: any, ...rest: any[]): void;
-    fromFastHex(hex: any, ...rest: any[]): void | this;
-    toHex(...rest: any[]): any;
-    asyncToHex(...rest: any[]): any;
-    toFastHex(...rest: any[]): any;
-    fromString(str: any, ...rest: any[]): void;
-    asyncFromString(str: any, ...rest: any[]): void;
-    toString(...rest: any[]): any;
-    asyncToString(...rest: any[]): any;
-    fromJSON(json: any): void;
-    asyncFromJSON(json: any, ...rest: any[]): void;
-    toJSON(): T101;
-    asyncToJSON(): void;
-    clone(): any;
-    cloneByBuffer(): any;
-    cloneByFastBuffer(): any;
-    cloneByHex(): any;
-    cloneByString(): any;
-    cloneByJSON(): any;
-  }
-  declare class Script extends Struct {
-    constructor(chunks?: any[]);
+    toFastBuffer(...rest: any[]): Promise<Buffer>;
+    fromHex(hex: string, ...rest: any[]): this;
+    asyncFromHex(hex: string, ...rest: any[]): Promise<this>;
+    fromFastHex(hex: string, ...rest: any[]): this;
+    toHex(...rest: any[]): string;
+    asyncToHex(...rest: any[]): Promise<string>;
+    toFastHex(...rest: any[]): string;
+    fromString(str: string, ...rest: any[]): this;
+    asyncFromString(str: string, ...rest: any[]): Promise<this>;
+    toString(...rest: any[]): string;
+    asyncToString(...rest: any[]): Promise<string>;
     fromJSON(json: any): this;
-    toJSON(): string;
-    fromBuffer(buf: any): this;
-    toBuffer(): any;
-    fromString(str: any): this;
-    toString(): string;
-    /**
-     * Input the script from the script string format used in bitcoind data tests
-     */
-    fromBitcoindString(str: any): this;
-    /**
-     * Output the script to the script string format used in bitcoind data tests.
-     */
-    toBitcoindString(): string;
-    /**
-     * Input the script from the script string format used in bitcoind data tests
-     */
-    fromAsmString(str: any): this;
-    /**
-     * Output the script to the script string format used in bitcoind data tests.
-     */
-    toAsmString(): string;
-    fromOpReturnData(dataBuf: any): this;
-    fromSafeData(dataBuf: any): this;
-    fromSafeDataArray(dataBufs: any): this;
-    getData(): any;
-    /**
-     * Turn script into a standard pubKeyHash output script
-     */
-    fromPubKeyHash(hashBuf: any): this;
-    static sortPubKeys(pubKeys: any): any;
-    /**
-     * Generate a multisig output script from a list of public keys. sort
-     * defaults to true. If sort is true, the pubKeys are sorted
-     * lexicographically.
-     */
-    fromPubKeys(m: any, pubKeys: any, sort?: boolean): this;
-    removeCodeseparators(): this;
-    isPushOnly(): boolean;
-    isOpReturn(): boolean;
-    isSafeDataOut(): boolean;
-    isPubKeyHashOut(): boolean;
-    /**
-     * A pubKeyHash input should consist of two push operations. The first push
-     * operation may be OP_0, which means the signature is missing, which is true
-     * for some partially signed (and invalid) transactions.
-     */
-    isPubKeyHashIn(): boolean;
-    isScriptHashOut(): boolean;
-    /**
-     * Note that these are frequently indistinguishable from pubKeyHashin
-     */
-    isScriptHashIn(): boolean;
-    isMultiSigOut(): boolean;
-    isMultiSigIn(): any;
-    /**
-     * Analagous to bitcoind's FindAndDelete Find and deconste equivalent chunks,
-     * typically used with push data chunks.  Note that this will find and deconste
-     * not just the same data, but the same data with the same push data op as
-     * produced by default. i.e., if a pushdata in a tx does not use the minimal
-     * pushdata op, then when you try to remove the data it is pushing, it will not
-     * be removed, because they do not use the same pushdata op.
-     */
-    findAndDelete(script: any): this;
-    writeScript(script: any): this;
-    writeString(str: any): this;
-    writeOpCode(opCodeNum: any): this;
-    setChunkOpCode(i: any, opCodeNum: any): this;
-    writeBn(bn: any): this;
-    writeNumber(number: any): this;
-    setChunkBn(i: any, bn: any): this;
-    writeBuffer(buf: any): this;
-    setChunkBuffer(i: any, buf: any): this;
-    checkMinimalPush(i: any): boolean;
+    asyncFromJSON(json: any, ...rest: any[]): Promise<this>;
+    toJSON(): any;
+    asyncToJSON(): Promise<any>;
+    clone(): this;
+    cloneByBuffer(): this;
+    cloneByFastBuffer(): this;
+    cloneByHex(): this;
+    cloneByString(): this;
+    cloneByJSON(): this;
   }
 }
